@@ -3,34 +3,29 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 
-from viktor import ViktorController
-from viktor.parametrization import ViktorParametrization, TextField, DateField, Text, LineBreak, Table, NumberField, DownloadButton
-from viktor.views import PDFView, PDFResult
-from viktor.external.word import render_word_file, WordFileTag, WordFileImage
-from viktor.utils import convert_word_to_pdf
-from viktor.result import DownloadResult
+import viktor as vkt
 
 
-class Parametrization(ViktorParametrization):
+class Parametrization(vkt.ViktorParametrization):
 
-    intro = Text("# Invoice app 💰 \n This app makes an invoice based on your own Word template")
+    intro = vkt.Text("# Invoice app 💰 \n This app makes an invoice based on your own Word template")
 
-    client_name = TextField("Name of client")
-    company = TextField("Company name")
-    lb1 = LineBreak()  # This is just to separate fields in the parametrization UI
-    date = DateField("Date")
+    client_name = vkt.TextField("Name of client")
+    company = vkt.TextField("Company name")
+    lb1 = vkt.LineBreak()  # This is just to separate fields in the parametrization UI
+    date = vkt.DateField("Date")
 
     # Table
-    table_price = Table("Products")
-    table_price.qty = NumberField("Quantity", suffix="-", min=0)
-    table_price.desc = TextField("Description", suffix="-")
-    table_price.price = NumberField("Price", suffix="€", min=0)
+    table_price = vkt.Table("Products")
+    table_price.qty = vkt.NumberField("Quantity", suffix="-")
+    table_price.desc = vkt.TextField("Description", suffix="-")
+    table_price.price = vkt.NumberField("Price", suffix="€")
 
     # Downloadbutton
-    download_word_file = DownloadButton('Download report', method='download_word_file')
+    download_word_file = vkt.DownloadButton('Download report', method='download_word_file')
 
 
-class Controller(ViktorController):
+class Controller(vkt.ViktorController):
 
     label = 'reporting'
     parametrization = Parametrization
@@ -44,34 +39,33 @@ class Controller(ViktorController):
         components = []
 
         # Fill components list with data
-        components.append(WordFileTag("Client_name", params.client_name))
-        components.append(WordFileTag("company", params.company))
-        components.append(WordFileTag("date", str(params.date))) # Convert date to string format
-
-        components.append(WordFileTag("total_price", str(total_price)))  # Convert price float to string
-        components.append(WordFileTag("table1", table))
-        components.append(WordFileTag("table2", table))
+        components.append(vkt.word.WordFileTag("Client_name", params.client_name))
+        components.append(vkt.word.WordFileTag("company", params.company))
+        components.append(vkt.word.WordFileTag("date", str(params.date))) # Convert date to string format
+        components.append(vkt.word.WordFileTag("total_price", str(total_price)))  # Convert price float to string
+        components.append(vkt.word.WordFileTag("table1", table))
+        components.append(vkt.word.WordFileTag("table2", table))
 
         # Place image
         figure = self.create_figure(params)
-        word_file_figure = WordFileImage(figure, "figure_sales", width=500)
+        word_file_figure = vkt.word.WordFileImage(figure, "figure_sales", width=500)
         components.append(word_file_figure)
 
         # Get path to template and render word file
         template_path = Path(__file__).parent / "files" / "Template.docx"
         with open(template_path, 'rb') as template:
-            word_file = render_word_file(template, components)
+            word_file = vkt.word.render_word_file(template, components)
 
         return word_file
 
-    @PDFView("PDF viewer", duration_guess=5)
+    @vkt.PDFView("PDF viewer", duration_guess=5)
     def pdf_view(self, params, **kwargs):
         word_file = self.generate_word_document(params)
 
         with word_file.open_binary() as f1:
-            pdf_file = convert_word_to_pdf(f1)
+            pdf_file = vkt.convert_word_to_pdf(f1)
 
-        return PDFResult(file=pdf_file)
+        return vkt.PDFResult(file=pdf_file)
 
     @staticmethod
     def calc_total_price(params):
@@ -114,4 +108,4 @@ class Controller(ViktorController):
     def download_word_file(self, params, **kwargs):
         word_file = self.generate_word_document(params)
 
-        return DownloadResult(word_file, "Invoice.docx")
+        return vkt.DownloadResult(word_file, "Invoice.docx")
